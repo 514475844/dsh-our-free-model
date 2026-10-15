@@ -36,14 +36,16 @@ export function stageDesktopService(destination) {
 }
 
 export async function prepareDesktop({ nodeExecutable = process.execPath, nodeLicense = process.env.OFM_DESKTOP_NODE_LICENSE } = {}) {
-  if (process.platform !== 'win32') throw new Error('当前桌面安装包只支持 Windows')
+  if (process.platform !== 'win32' && process.platform !== 'darwin') {
+    throw new Error('当前桌面安装包只支持 Windows 和 macOS')
+  }
   const cleanEnv = { ...process.env }
   delete cleanEnv.NODE_OPTIONS
   delete cleanEnv.NODE_PATH
   const runtime = JSON.parse(execFileSync(nodeExecutable, ['-p', 'JSON.stringify({version:process.version,platform:process.platform,arch:process.arch})'], { env: cleanEnv, encoding: 'utf8' }))
   const [major, minor] = runtime.version.slice(1).split('.').map(Number)
-  if (runtime.platform !== 'win32' || runtime.arch !== process.arch || !(major === 22 && minor >= 19 || major >= 24)) {
-    throw new Error('Node 运行时必须匹配 Windows 架构，且为 22.19+ 或 24+')
+  if (runtime.platform !== process.platform || runtime.arch !== process.arch || !(major === 22 && minor >= 19 || major >= 24)) {
+    throw new Error('Node 运行时必须匹配当前平台和架构，且为 22.19+ 或 24+')
   }
   const cache = path.join(repositoryRoot, 'packages/desktop/src-tauri/.node-license-cache', `${runtime.version}.txt`)
   let license
@@ -63,7 +65,10 @@ export async function prepareDesktop({ nodeExecutable = process.execPath, nodeLi
   fs.rmSync(resourceDirectory, { recursive: true, force: true })
   stageDesktopService(path.join(resourceDirectory, 'service'))
   fs.mkdirSync(path.join(resourceDirectory, 'runtime'), { recursive: true })
-  fs.copyFileSync(nodeExecutable, path.join(resourceDirectory, 'runtime/node.exe'))
+  const runtimeName = process.platform === 'win32' ? 'node.exe' : 'node'
+  const runtimePath = path.join(resourceDirectory, 'runtime', runtimeName)
+  fs.copyFileSync(nodeExecutable, runtimePath)
+  if (process.platform !== 'win32') fs.chmodSync(runtimePath, 0o755)
   fs.writeFileSync(path.join(resourceDirectory, 'runtime/LICENSE'), license)
   fs.writeFileSync(path.join(resourceDirectory, 'runtime/version.json'), JSON.stringify(runtime) + '\n')
   console.log(`桌面资源已生成：完整独立服务及 Node ${runtime.version} ${runtime.arch}`)

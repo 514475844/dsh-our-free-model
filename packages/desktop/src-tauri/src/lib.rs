@@ -35,7 +35,7 @@ fn start_service(app: &tauri::AppHandle) -> Result<String, String> {
     } else {
         app.path().resource_dir().map_err(|_| "无法定位安装资源")?
     };
-    let node = resources.join("runtime/node.exe");
+    let node = resources.join("runtime").join(if cfg!(windows) { "node.exe" } else { "node" });
     let host = resources.join("service/packages/desktop/service-host.mjs");
     if !node.is_file() || !host.is_file() {
         return Err("安装资源不完整，请重新安装桌面程序".into());
