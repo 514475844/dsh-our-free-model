@@ -69,6 +69,18 @@ check('manifest rejects missing or malformed hashes', () => {
   assert.throws(() => parseManifest(manifestOf({ files: [{ path: 'index.js', sha256: 'nope', size: 1 }] })))
   assert.throws(() => parseManifest(manifestOf({ files: [{ path: 'index.js', sha256: 'a'.repeat(64), size: -5 }] })))
 })
+check('signed engine packages fit without raising the ordinary file size limit', () => {
+  const engine = { path: 'vendor/magpie/bin/magpie-win32-x64.exe', sha256: 'c'.repeat(64), size: 68 * 1024 * 1024 }
+  const files = [...manifestOf().files, engine,
+    ...Array.from({ length: 87 }, (_, i) => ({ path: `src/part-${i}.js`, sha256: 'd'.repeat(64), size: 20 }))]
+  assert.equal(parseManifest(manifestOf({ files })).files.length, 90)
+  for (const path of ['src/oversize.js', 'vendor/magpie/bin/other.exe', 'vendor/magpie/bin/magpie-win32-x64.exe.js']) {
+    assert.throws(() => parseManifest(manifestOf({ files: [...manifestOf().files, { ...engine, path }] })), /size/)
+  }
+  assert.throws(() => parseManifest(manifestOf({ files: [...manifestOf().files, { ...engine, size: 128 * 1024 * 1024 + 1 }] })), /size/)
+  const tooMany = [...files, ...Array.from({ length: 39 }, (_, i) => ({ path: `src/extra-${i}.js`, sha256: 'e'.repeat(64), size: 10 }))]
+  assert.throws(() => parseManifest(manifestOf({ files: tooMany })), /cap/)
+})
 check('manifest base must stay manifest-relative (issue #19)', () => {
   for (const base of ['https://evil.example/', '//evil.example/', '/abs', 'C:\escape']) {
     assert.throws(() => parseManifest(manifestOf({ base })), /relative/, `base "${base}" must be refused`)

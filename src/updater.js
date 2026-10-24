@@ -145,7 +145,9 @@ export function bustCdnCache(url, now = Date.now()) {
 
 const MAX_MANIFEST_BYTES = 256 * 1024
 const MAX_FILE_BYTES = 4 * 1024 * 1024
-const MAX_FILES = 80
+const MAX_ENGINE_BYTES = 128 * 1024 * 1024
+const MAX_FILES = 128
+const ENGINE_BINARY = /^vendor\/magpie\/bin\/magpie-(?:win32-(?:x64|arm64)\.exe|(?:linux|darwin)-(?:x64|arm64))$/
 const SHA_RE = /^[0-9a-f]{64}$/
 // Hot reload evaluates a fresh updater module before the old request finishes.
 // A process-wide lock keeps the successor from starting a second transaction.
@@ -240,7 +242,8 @@ function parseFileEntry(row) {
   const sha256 = typeof row?.sha256 === 'string' ? row.sha256.toLowerCase() : ''
   if (!SHA_RE.test(sha256)) throw new Error(`manifest entry "${normalized}" has no valid sha256`)
   const size = row?.size
-  if (!Number.isInteger(size) || size <= 0 || size > MAX_FILE_BYTES) {
+  const limit = ENGINE_BINARY.test(normalized) ? MAX_ENGINE_BYTES : MAX_FILE_BYTES
+  if (!Number.isInteger(size) || size <= 0 || size > limit) {
     throw new Error(`manifest entry "${normalized}" has an out-of-range size`)
   }
   return { path: normalized, sha256, size }
