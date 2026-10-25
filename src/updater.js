@@ -457,7 +457,16 @@ function isTransientDownloadError(error) {
 /** jsDelivr's primary edge can redirect documentation files to raw, which is
  *  unavailable on some client networks. Try its gcore edge at the exact same
  *  SHA/path, never an arbitrary Location or a mutable branch. Size/hash checks
- *  remain outside the transport fallback and cannot authorize another body. */
+ *  remain outside the transport fallback and cannot authorize another body.
+ *
+ *  jsDelivr also refuses to serve any file above its own size ceiling (measured
+ *  2026-10-25: a 65 MB vendored engine binary answered `403 Forbidden` while
+ *  every ordinary file on the same commit answered 200). A release file that
+ *  large is therefore unreachable through jsDelivr on every edge, so a pinned
+ *  commit falls back to the same commit on raw and through the raw proxy — the
+ *  same SHA, a different transport. Only pinned commits get that fallback: a
+ *  mutable branch's raw bytes could move between the manifest read and the file
+ *  download, which is exactly what pinning exists to prevent. */
 function stagedFileSources(manifestUrl, manifest, relativePath) {
   const file = fileUrlOf(manifestUrl, manifest, relativePath)
   const url = new URL(file)
@@ -465,8 +474,11 @@ function stagedFileSources(manifestUrl, manifest, relativePath) {
   if (url.protocol !== 'https:' || url.hostname !== 'cdn.jsdelivr.net' || url.port
     || url.username || url.password || !url.pathname.startsWith(prefix)
     || !/^[a-f0-9]{40}\//.test(url.pathname.slice(prefix.length))) return [file]
-  url.hostname = 'gcore.jsdelivr.net'
-  return [file, url.href]
+  const sha = url.pathname.slice(prefix.length).split('/')[0]
+  const gcore = new URL(url)
+  gcore.hostname = 'gcore.jsdelivr.net'
+  const raw = `https://raw.githubusercontent.com/${REPO}/${sha}/${url.pathname.slice(prefix.length + sha.length + 1)}`
+  return [file, gcore.href, raw, viaRawProxy(`${REPO}/${sha}/${url.pathname.slice(prefix.length + sha.length + 1)}`)]
 }
 
 export async function stageRelease({ manifest, manifestUrl, stageDir, fetchImpl = fetch, concurrency = 4, onProgress = () => {}, timeoutMs = 30000 }) {
@@ -509,7 +521,15 @@ export async function stageRelease({ manifest, manifestUrl, stageDir, fetchImpl 
               break
             } catch (error) {
               const status = /^HTTP (\d{3})$/.exec(String(error?.message ?? ''))?.[1]
-              const canFallback = status ? /^(3\d\d|404|429|5\d\d)$/.test(status) : isTransientDownloadError(error)
+              // A 403 is an authorization refusal, and switching hosts on it
+              // would look like a way around one. The single exception is a file
+              // jsDelivr structurally cannot serve: its size ceiling answers 403
+              // for the vendored engine binary, so the same pinned commit's raw
+              // transport is tried instead. Any other 403 still stops here.
+              const oversized = status === '403' && ENGINE_BINARY.test(file.path)
+              const canFallback = status
+                ? /^(3\d\d|404|429|5\d\d)$/.test(status) || oversized
+                : isTransientDownloadError(error)
               if (!canFallback || mirror === sources.length - 1 || signal?.aborted) throw error
             }
           }

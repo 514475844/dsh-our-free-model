@@ -481,6 +481,38 @@ await checkAsync('CDN authorization refusal cannot trigger a mirror fallback', a
   } finally { fs.rmSync(data, { recursive: true, force: true }) }
 })
 
+await checkAsync('a release file jsDelivr refuses by size falls back to raw at the same SHA', async () => {
+  // Measured 2026-10-25: the 65 MB vendored engine binary answers 403 on every
+  // jsDelivr edge while ordinary files on the same commit answer 200. That is a
+  // structural refusal, not an authorization one, so the pinned commit's raw
+  // transport is the fallback — and only for the engine binary's own path.
+  const enginePath = 'vendor/magpie/bin/magpie-win32-x64.exe'
+  const engineBody = 'engine-binary-fixture'
+  const withEngine = manifestFor({ ...newFiles, [enginePath]: engineBody })
+  const fixture = snapshotFetch({ source: cdnSnapshot })
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'ofm-cdn-oversized-'))
+  const calls = []
+  const fetchImpl = async (url, opts) => {
+    const parsed = new URL(url)
+    calls.push(String(url))
+    if (parsed.pathname.endsWith(`/${enginePath}`)) {
+      if (parsed.hostname === 'cdn.jsdelivr.net' || parsed.hostname === 'gcore.jsdelivr.net') {
+        return new Response(null, { status: 403 })
+      }
+      assert.match(parsed.pathname, new RegExp(`/${SNAPSHOT}/${enginePath}$`), 'the fallback stays on the pinned commit')
+      return new Response(engineBody)
+    }
+    return fixture.fetchImpl(url, opts)
+  }
+  try {
+    await stageRelease({ manifest: parseManifest(withEngine), manifestUrl: cdnSnapshot, stageDir: data, fetchImpl })
+    verifyStaged(data, parseManifest(withEngine))
+    const attempts = calls.filter(url => url.endsWith(enginePath))
+    assert.ok(attempts.some(url => url.includes('raw.githubusercontent.com')), 'raw is tried at the same SHA')
+    assert.equal(fs.readFileSync(path.join(data, ...enginePath.split('/')), 'utf8'), engineBody)
+  } finally { fs.rmSync(data, { recursive: true, force: true }) }
+})
+
 const server = serveFrom({ 'repo/feed/manifest.json': JSON.stringify(newManifest), 'repo/index.js': newFiles['index.js'], 'repo/package.json': newFiles['package.json'], 'repo/client.js': newFiles['client.js'], 'repo/src/new-deep.js': newFiles['src/new-deep.js'] })
 const corruptServer = serveFrom({ 'repo/feed/manifest.json': JSON.stringify(corruptManifest), 'repo/index.js': 'tampered\n', 'repo/package.json': newFiles['package.json'], 'repo/client.js': newFiles['client.js'], 'repo/src/new-deep.js': newFiles['src/new-deep.js'] })
 const badManifestServer = serveFrom({ 'repo/feed/manifest.json': '{"version": "oops"}' })
