@@ -7,6 +7,9 @@ import net from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loopbackFetch } from './loopback-fetch.js'
+import {
+  POLICY_REFUSED, assertEngineMutation, deniedLookup, filterEngineJSON, policyMutation, policyResponse,
+} from './magpie-policy.js'
 
 const vendor = fileURLToPath(new URL('../vendor/magpie/', import.meta.url))
 function readBrandIcon() {
@@ -133,6 +136,10 @@ async function readBounded(body, limit, signal) {
 }
 
 function readKeyBody(req, signal) {
+  return readRequestBody(req, MAX_KEY_BODY, signal)
+}
+
+function readRequestBody(req, limit, signal) {
   return new Promise((resolve, reject) => {
     const chunks = []
     let size = 0
@@ -147,13 +154,13 @@ function readKeyBody(req, signal) {
     const rejectBody = error => { cleanup(); req.pause(); reject(error) }
     const data = chunk => {
       size += chunk.length
-      if (size > MAX_KEY_BODY) rejectBody(engineError('Gateway key request exceeds limit', 413))
+      if (size > limit) rejectBody(engineError('Engine request body exceeds limit', 413))
       else chunks.push(chunk)
     }
     const end = () => { cleanup(); resolve(Buffer.concat(chunks)) }
-    const failed = () => rejectBody(engineError('Gateway key request interrupted', 400))
+    const failed = () => rejectBody(engineError('Engine request interrupted', 400))
     const aborted = () => rejectBody(engineError('Engine request aborted'))
-    const timer = setTimeout(() => rejectBody(engineError('Gateway key request timed out', 408)), 30_000)
+    const timer = setTimeout(() => rejectBody(engineError('Engine request timed out', 408)), 30_000)
     if (signal.aborted) { aborted(); return }
     signal.addEventListener('abort', aborted, { once: true })
     req.on('data', data)
@@ -333,6 +340,11 @@ const engineAppearanceCSS = `
 :root[data-ofm-engine] #nav button[data-view="plugins"] > span,
 :root[data-ofm-engine] #view-plugins :is(.pm-intro,.pm-sechead),
 :root[data-ofm-engine] #addProvider.has-new::after { display:none!important }
+:root[data-ofm-engine] #view-plugins > .ofm-plugin-source {
+  flex:none; margin:0 2px 10px; padding:7px 10px; border:1px solid var(--line-2);
+  border-radius:8px; background:var(--card-2); color:var(--fg-2);
+  font-size:11.5px; line-height:1.5; text-wrap:pretty;
+}
 :root[data-ofm-engine] #nav button[data-view="plugins"] > .nav-ic { display:block!important; flex:none }
 :root[data-ofm-engine] body:not(.side-nav) #nav button[data-view="plugins"] { display:inline-flex; align-items:center; justify-content:center; min-width:32px }
 :root[data-ofm-engine] #view-routing .rt-flier { display:none!important }
@@ -516,6 +528,30 @@ function engineProductCopy(brandIcon) {
     }
     const add = document.querySelector('#addProvider.has-new')
     if (add?.hasAttribute('title')) add.removeAttribute('title')
+    pluginSource()
+  }
+  // The plugin market is magpie's community's, not this product's: say whose it
+  // is on every tab that offers third-party code. The built-in tab lists the
+  // engine's own switches, so it carries no such notice. The page redraws its
+  // children through replaceKeeping, so the note is put back when it goes.
+  const pluginSource = () => {
+    const view = document.querySelector('#view-plugins')
+    if (!view) return
+    const body = view.querySelector(':scope > .pm-body')
+    const tabs = [...view.querySelectorAll('.lib-tabs .opt')]
+    const active = tabs.findIndex(tab => tab.classList.contains('on'))
+    const notice = view.querySelector(':scope > .ofm-plugin-source')
+    if (!body || active === 0) { notice?.remove(); return }
+    const zh = /^zh/i.test(typeof locale === 'string' ? locale : document.documentElement.lang || '')
+    const text = zh
+      ? '这里的插件来自 magpie 社区（github.com/magpie-community/plugins），由社区作者维护，与 Our Free Model 无关：我们不提供这些插件，也不对其行为负责。'
+      : 'Plugins here come from the magpie community (github.com/magpie-community/plugins) and are maintained by their authors. They are not part of Our Free Model: we do not provide them and are not responsible for them.'
+    if (notice) { if (notice.textContent !== text) notice.textContent = text; return }
+    const note = document.createElement('p')
+    note.className = 'ofm-plugin-source'
+    note.setAttribute('role', 'note')
+    note.textContent = text
+    body.before(note)
   }
   const observer = new MutationObserver(brandLabels)
   observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'title'] })
@@ -570,6 +606,18 @@ function protectUpdate(method, pathname) {
   if (method !== 'GET' && method !== 'HEAD' && /^\/api\/update(?:\/|$)/.test(pathname)) {
     throw engineError('Engine updates are managed by the application build', 409)
   }
+}
+
+/** A request body as the policy reads it; anything unreadable decides nothing. */
+function parseBodyJSON(body) {
+  if (body == null) return {}
+  if (typeof body === 'object' && !Buffer.isBuffer(body) && !ArrayBuffer.isView(body)) return body
+  try {
+    const text = typeof body === 'string' ? body
+      : Buffer.isBuffer(body) ? body.toString('utf8') : new TextDecoder().decode(body)
+    const value = JSON.parse(text)
+    return value && typeof value === 'object' ? value : {}
+  } catch { return {} }
 }
 
 /**
@@ -779,6 +827,9 @@ export function createMagpieEngine({ dataDir, logger, binary } = {}) {
     const pathname = routePath(destination)
     const verb = String(method).toUpperCase()
     protectUpdate(verb, pathname)
+    if (deniedLookup(pathname, new URL(destination, 'http://127.0.0.1').searchParams)) {
+      throw engineError(POLICY_REFUSED, 403)
+    }
     if (forbiddenFrame(options.headers || {}, pathname)) throw engineError('Framed engine API access is forbidden', 403)
     await start()
     assertOpen()
@@ -804,6 +855,7 @@ export function createMagpieEngine({ dataDir, logger, binary } = {}) {
         body = JSON.stringify(body)
         headers['content-type'] ??= 'application/json'
       }
+      if (policyMutation(verb, pathname)) assertEngineMutation(verb, pathname, parseBodyJSON(body))
       if (callerKeysMutation(verb, pathname)) {
         const stream = new Response(body).body
         body = stream ? await readBounded(stream, MAX_KEY_BODY, signal) : Buffer.alloc(0)
@@ -823,6 +875,16 @@ export function createMagpieEngine({ dataDir, logger, binary } = {}) {
         finish()
         return new Response(body, { status: response.status, statusText: response.statusText, headers })
       }
+      if (response.ok && policyResponse(pathname) && /json/i.test(response.headers.get('content-type') || '')) {
+        const raw = await readBounded(response.body, MAX_HTML, signal)
+        let value
+        try { value = JSON.parse(raw.toString('utf8')) } catch { finish(); return new Response(raw, { status: response.status, headers: response.headers }) }
+        const filtered = Buffer.from(JSON.stringify(filterEngineJSON(pathname, value)))
+        const headers = new Headers(response.headers)
+        for (const key of ['content-length', 'content-encoding', 'etag']) headers.delete(key)
+        finish()
+        return new Response(filtered, { status: response.status, statusText: response.statusText, headers })
+      }
       const reader = response.body.getReader()
       const bodyStream = new ReadableStream({
         async pull(stream) {
@@ -837,6 +899,7 @@ export function createMagpieEngine({ dataDir, logger, binary } = {}) {
     } catch (failure) {
       finish()
       if (failure.statusCode === 409 && failure.message === INTERNAL_KEY_REASON) throw failure
+      if (failure.statusCode === 403 && failure.message === POLICY_REFUSED) throw failure
       if (failure.statusCode === 400) throw engineError('Invalid gateway key request', 400)
       if (failure.statusCode === 413) throw engineError('Gateway key request exceeds limit', 413)
       if (options.signal?.aborted) throw new DOMException('Engine request aborted', 'AbortError')
@@ -854,20 +917,24 @@ export function createMagpieEngine({ dataDir, logger, binary } = {}) {
       pathname = routePath(destination)
       prefix = visiblePrefix(req, options)
       protectUpdate(req.method, pathname)
+      if (deniedLookup(pathname, new URL(destination, 'http://127.0.0.1').searchParams)) {
+        throw engineError(POLICY_REFUSED, 403)
+      }
       if (forbiddenFrame(req.headers, pathname)) throw engineError('Framed engine API access is forbidden', 403)
       await start()
       assertOpen()
       if (req.aborted || res.destroyed) return
       if (active.size >= MAX_ACTIVE) throw engineError('Engine request limit reached')
-      if (callerKeysMutation(req.method, pathname)) {
+      if (callerKeysMutation(req.method, pathname) || policyMutation(req.method, pathname)) {
         const controller = new AbortController()
         const cancel = () => controller.abort()
         active.add(cancel)
         try {
-          forwardedBody = await readKeyBody(req, AbortSignal.any([
+          forwardedBody = await readRequestBody(req, MAX_KEY_BODY, AbortSignal.any([
             lifetime.signal, runController.signal, controller.signal,
           ]))
-          protectInternalKey(forwardedBody)
+          if (callerKeysMutation(req.method, pathname)) protectInternalKey(forwardedBody)
+          else assertEngineMutation(req.method, pathname, parseBodyJSON(forwardedBody))
         } finally { active.delete(cancel) }
         assertOpen()
       }
@@ -947,7 +1014,9 @@ export function createMagpieEngine({ dataDir, logger, binary } = {}) {
           const html = /\btext\/html\b/i.test(outgoing['content-type'] || '') &&
             !/\battachment\b/i.test(outgoing['content-disposition'] || '') && req.method !== 'HEAD'
           const keys = callerKeysListing(req.method, pathname) && /json/i.test(outgoing['content-type'] || '') && req.method !== 'HEAD'
-          if ((html || keys) && response.statusCode === 200) {
+          const policy = !keys && req.method !== 'HEAD' && response.statusCode === 200 &&
+            policyResponse(pathname) && /\bjson\b/i.test(outgoing['content-type'] || '')
+          if ((html || keys || policy) && response.statusCode === 200) {
             const chunks = []
             let size = 0
             for await (const chunk of response) {
@@ -956,7 +1025,13 @@ export function createMagpieEngine({ dataDir, logger, binary } = {}) {
               chunks.push(chunk)
             }
             const raw = Buffer.concat(chunks)
-            const body = keys ? publicKeyListing(raw) : Buffer.from(rewriteHTML(raw.toString('utf8'), pathname, prefix))
+            let body
+            if (keys) body = publicKeyListing(raw)
+            else if (policy) {
+              let value
+              try { value = JSON.parse(raw.toString('utf8')) } catch { value = undefined }
+              body = value === undefined ? raw : Buffer.from(JSON.stringify(filterEngineJSON(pathname, value)))
+            } else body = Buffer.from(rewriteHTML(raw.toString('utf8'), pathname, prefix))
             for (const key of ['content-length', 'content-encoding', 'etag', 'last-modified', 'accept-ranges', 'content-range']) delete outgoing[key]
             outgoing['content-length'] = body.length
             outgoing['cache-control'] = 'no-store'

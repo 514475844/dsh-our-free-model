@@ -62,6 +62,7 @@ import { createSubscriptionRuntime } from './src/subscription-completion.js'
 import { isSubscriptionEntry } from './src/subscription-adapter.js'
 import { createMagpieEngine } from './src/magpie-engine.js'
 import { createMagpieModels, combineSubscriptionRuntimes } from './src/magpie-models.js'
+import { DISCLAIMER, DISCLAIMER_VERSION, disclaimerAcknowledged } from './src/disclaimer.js'
 
 export { fromOpenAiMessages } from './src/core/completion.js'
 import { buildStats } from './src/core/stats.js'
@@ -1875,6 +1876,14 @@ export function createApiRoutes(deps) {
           return send(404, { error: `pool unavailable (${reason})` })
         }
       }
+      if (method === 'GET' && routePath === '/disclaimer') {
+        return send(200, { ...DISCLAIMER, acknowledged: disclaimerAcknowledged(deps.settings.get()) })
+      }
+      if (method === 'POST' && routePath === '/disclaimer/ack') {
+        deps.settings.update({ disclaimerAck: DISCLAIMER_VERSION })
+        deps.settings.flush()
+        return send(200, { ok: true, acknowledged: true })
+      }
       if (method === 'GET' && routePath === '/announcement') {
         // A managed install also stands down the owner's onboarding copy: the
         // pack, not the plugin, speaks for what is new.
@@ -2431,6 +2440,7 @@ function buildSummary(deps) {
     outlet: deps.egressInfo(),
     probedAt: snapshot.at ?? 0,
     announcementVersion: ANNOUNCEMENT_VERSION,
+    disclaimerVersion: DISCLAIMER_VERSION,
     version: deps.meta().version,
     distribution: deps.meta().distribution,
     announcements: { unread: feedView.unread, fetchedAt: feedView.fetchedAt },

@@ -262,6 +262,9 @@ window.__ModuleLoader__.load({
         'ann.later': '稍后再说',
         'ann.page': '第 {n} / {total} 页',
         'ann.openSettings': '打开设置页',
+        'disclaimer.version': '免责声明版本 v{n}',
+        'disclaimer.saving': '保存中…',
+        'disclaimer.reopen': '使用须知与免责声明',
         'ann.p1': '免密：安装即可用，不需要注册、不需要填任何 API Key。',
         'ann.p2': '清单跟随上游：模型集合、上下文长度与能力每次刷新都重新拉取。',
         'ann.p3': '诚实的能力声明：探测不出来的能力不会显示，思考强度档位是真实生效的输出上限。',
@@ -1032,6 +1035,9 @@ window.__ModuleLoader__.load({
         'ann.later': 'Later',
         'ann.page': 'Page {n} of {total}',
         'ann.openSettings': 'Open settings',
+        'disclaimer.version': 'Disclaimer v{n}',
+        'disclaimer.saving': 'Saving…',
+        'disclaimer.reopen': 'Terms & disclaimer',
         'ann.p1': 'No credentials: install and use it — no sign-up, no API key to paste.',
         'ann.p2': 'The roster follows upstream: models, context lengths and capabilities are re-fetched on every refresh.',
         'ann.p3': 'Honest capability claims: anything a probe cannot confirm stays hidden, and each effort level is a real output budget.',
@@ -1753,6 +1759,13 @@ window.__ModuleLoader__.load({
 .ofm_annbody ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
 .ofm_annfoot{display:flex;align-items:center;gap:10px;padding:13px 22px;border-top:1px solid var(--dsw-alias-border-l1);background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 72%,transparent)}
 .ofm_annfoot .spacer{margin-left:auto}
+.ofm_disclaimersec{display:flex;flex-direction:column;gap:4px;padding-top:10px;border-top:1px solid var(--dsw-alias-border-l1)}
+.ofm_disclaimersec:first-of-type{border-top:0;padding-top:0}
+.ofm_disclaimersec h3{margin:0;font-size:13px;font-weight:660;color:var(--dsw-alias-label-primary)}
+.ofm_disclaimer{width:min(640px,92vw)}
+.ofm_shellfoot{display:flex;justify-content:center;padding:6px 0 2px}
+.ofm_linkbtn{appearance:none;background:none;border:0;padding:2px 6px;font:inherit;font-size:11.5px;color:var(--dsw-alias-label-tertiary);cursor:pointer;border-radius:6px;text-decoration:underline;text-underline-offset:3px;text-decoration-color:color-mix(in srgb,currentColor 40%,transparent)}
+.ofm_linkbtn:hover{color:var(--dsw-alias-label-secondary)}
 .ofm_kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .ofm_kvc{padding:9px 12px;border-radius:12px;border:1px solid var(--dsw-alias-border-l1);background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 74%,transparent);box-shadow:inset 0 1px 0 rgb(255 255 255 / 4%);display:flex;flex-direction:column;gap:3px}
 .ofm_kvc b{font-size:12.5px;font-variant-numeric:tabular-nums}
@@ -7031,6 +7044,22 @@ window.__ModuleLoader__.load({
         try { window.localStorage?.setItem(EFFECTS_KEY, next ? 'on' : 'off') } catch { /* 当前页面仍可切换 */ }
         return next
       })
+      /* The disclaimer is not a gate on the lanes: it reads once on the first
+         settings visit and is reopenable afterwards. `undefined` means the answer
+         has not arrived yet, which is neither "show it" nor "hide it". */
+      const [disclaimer, setDisclaimer] = useState(undefined)
+      const [disclaimerOpen, setDisclaimerOpen] = useState(false)
+      useEffect(() => {
+        let alive = true
+        api('/disclaimer')
+          .then(payload => { if (alive) setDisclaimer(payload) })
+          .catch(() => { if (alive) setDisclaimer({ acknowledged: true }) })
+        return () => { alive = false }
+      }, [])
+      useEffect(() => {
+        if (disclaimer === undefined) return
+        if (disclaimer.acknowledged !== true) setDisclaimerOpen(true)
+      }, [disclaimer])
       const shellRef = useRef(null)
       const [active, setActive] = useState(true)
       useEffect(() => {
@@ -7120,8 +7149,7 @@ window.__ModuleLoader__.load({
           h(StarButton, { t })))
 
       const page = tab === 'workspace'
-        ? h(WorkspacePage, { t, summary, section: workspaceSection, onSelect: setWorkspaceSection })
-        : tab === 'channels'
+        ? h(WorkspacePage, { t, summary, section: workspaceSection, onSelect: setWorkspaceSection })        : tab === 'channels'
         ? h(ChannelsPage, { t, ctx, summary })
         : tab === 'aggregate'
           ? h(AggregatePage, { t, summary })
@@ -7145,7 +7173,15 @@ window.__ModuleLoader__.load({
 
       return h('div', { className: 'ofm_root ofm_shell', ref: shellRef, 'data-ofm-effects': effects ? 'on' : 'off', 'data-ofm-active': active ? 'true' : 'false' },
         nav,
-        h('div', { className: 'ofm_workspace', id: 'ofm-workspace', role: 'tabpanel', 'aria-labelledby': `ofm-tab-${tab}` }, page))
+        h('div', { className: 'ofm_workspace', id: 'ofm-workspace', role: 'tabpanel', 'aria-labelledby': `ofm-tab-${tab}` }, page),
+        h('footer', { className: 'ofm_shellfoot' },
+          h('button', {
+            type: 'button', className: 'ofm_linkbtn',
+            onClick: () => setDisclaimerOpen(true),
+          }, t('disclaimer.reopen'))),
+        disclaimerOpen && disclaimer !== undefined
+          ? h(Disclaimer, { t, copy: disclaimer, onClose: () => setDisclaimerOpen(false) })
+          : null)
     }
 
     function SponsorBanner({ t }) {
@@ -7289,6 +7325,45 @@ window.__ModuleLoader__.load({
         document.body.appendChild(host)
       }
       return host
+    }
+
+    /**
+     * The disclaimer: what this build does not offer, and whose responsibility
+     * a third-party channel is.
+     *
+     * Shown once on the first settings visit (and whenever the copy version
+     * moves), then reopenable from the footer link so a user who dismissed it
+     * can read it again. It never blocks the model lanes — acknowledging is a
+     * settings write, not a gate on inference.
+     */
+    function Disclaimer(props) {
+      const { t, onClose } = props
+      const [busy, setBusy] = useState(false)
+      const copy = props.copy
+      const dismiss = async () => {
+        if (busy) return
+        setBusy(true)
+        try { await post('/disclaimer/ack') } catch { /* ack is best effort */ }
+        onClose()
+      }
+      const host = announcementPortalHost()
+      useEffect(() => () => {
+        if (host.parentNode !== null) host.parentNode.removeChild(host)
+      }, [host])
+      return ReactDOM.createPortal(h('div', { className: 'ofm_scrim' },
+        h('div', { className: 'ofm_ann ofm_disclaimer', role: 'dialog', 'aria-modal': 'true', 'aria-label': copy.title },
+          h('div', { className: 'ofm_annhead' },
+            h('h2', { className: 'ofm_anntitle' }, copy.title),
+            h('p', { className: 'ofm_annsub' }, copy.subtitle)),
+          h('div', { className: 'ofm_annbody' },
+            h('p', null, copy.intro),
+            copy.sections.map(section => h('section', { key: section.id, className: 'ofm_disclaimersec' },
+              h('h3', null, section.heading),
+              h('p', null, section.body)))),
+          h('div', { className: 'ofm_annfoot' },
+            h('span', { className: 'ofm_note' }, t('disclaimer.version').replace('{n}', copy.version)),
+            h('span', { className: 'spacer' }),
+            h(Button, { kind: 'primary', disabled: busy, onClick: dismiss }, busy ? t('disclaimer.saving') : copy.accept)))), host)
     }
 
     function Announcement(props) {
@@ -7550,7 +7625,7 @@ window.__ModuleLoader__.load({
     exports.inject = inject
     exports.name = 'our-free-model'
     // Headless test seams use the same stub React as scripts/client-lint.mjs.
-    exports.__test = { parseSafeHtml, safeUrl, sanitizeStyle, htmlToDom, buildHeatCells, Heatmap, ChannelsPage, UpgradePanel, useEacLogin, EacAuth, PicksPage, RecoCard, DICT, useChannelRpc, Shell, SubscriptionsPage, CSS }
+    exports.__test = { parseSafeHtml, safeUrl, sanitizeStyle, htmlToDom, buildHeatCells, Heatmap, ChannelsPage, UpgradePanel, useEacLogin, EacAuth, PicksPage, RecoCard, DICT, useChannelRpc, Shell, SubscriptionsPage, Disclaimer, CSS }
     return module.exports
   },
 })

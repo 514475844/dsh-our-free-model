@@ -76,7 +76,7 @@ export const pageNames: Record<Page, string> = {
   eac: 'EAC 协付渠道', settings: '服务设置', connection: 'API 接入', sponsor: '来自赞助商的广告',
 }
 
-export function Sidebar({ page, summary, host }: { page: Page; summary?: Summary; host: Host }) {
+export function Sidebar({ page, summary, host, onDisclaimer }: { page: Page; summary?: Summary; host: Host; onDisclaimer(): void }) {
   return <>
     <a className="console-brand" href="/" aria-label="Our Free Model 首页">
       <img className="console-mark" src={brandMark} alt="" width={34} height={36} />
@@ -97,6 +97,7 @@ export function Sidebar({ page, summary, host }: { page: Page; summary?: Summary
     <div className="sidebar-support"><ShieldCheck size={17} /><div><strong>独立本地存储</strong><p>本机运行 / 仅监听回环地址</p></div></div>
     <div className="console-sidebar-footer"><div><span className="status-dot" />本地服务在线<small>v{summary?.version ?? '—'}</small></div>
       <ThemeToggle /><Button variant="ghost" aria-label="退出管理" title="退出管理" onClick={() => { void host.logout().catch(host.error) }}><LogOut size={16} /></Button></div>
+    <button type="button" className="sidebar-disclaimer" onClick={onDisclaimer}>使用须知与免责声明</button>
   </>
 }
 export function Topbar({ page, summary }: { page: Page; summary?: Summary }) {

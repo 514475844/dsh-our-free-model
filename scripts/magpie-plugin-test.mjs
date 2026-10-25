@@ -219,12 +219,16 @@ try {
     const listing = await ok(first, 'GET', '/engine/ui/api/providers')
     assert.ok(listing.json && typeof listing.json === 'object')
     const presets = listing.json.presets.filter(preset => preset.kind !== 'partner')
-    assert.equal(presets.length, 58, 'all pinned built-in presets must reach the plugin management API')
-    assert.equal(new Set(presets.map(preset => preset.id)).size, 58)
+    // 58 pinned built-ins minus Huawei Cloud, which this build does not offer.
+    assert.equal(presets.length, 57, 'every offered built-in preset must reach the plugin management API')
+    assert.equal(new Set(presets.map(preset => preset.id)).size, 57)
     const regional = presets.filter(preset => preset.regions?.length)
-    assert.equal(regional.length, 14)
-    assert.equal(regional.reduce((total, preset) => total + preset.regions.length, 0), 60)
-    for (const id of ['moonshot-cn', 'kimi-code', 'stepfun', 'stepfun-cn', 'tencent-cloud', 'huaweicloud',
+    assert.equal(regional.length, 13)
+    assert.equal(regional.reduce((total, preset) => total + preset.regions.length, 0), 58)
+    // The excluded channel must be absent from the very list the add sheet reads.
+    assert.ok(!presets.some(preset => preset.id === 'huaweicloud'), 'Huawei Cloud must not be offered')
+    assert.ok(!JSON.stringify(presets).toLowerCase().includes('huawei'), 'no Huawei Cloud preset may reach the page')
+    for (const id of ['moonshot-cn', 'kimi-code', 'stepfun', 'stepfun-cn', 'tencent-cloud',
       'qwen-cn', 'qwen-token-plan', 'bailian-token-plan', 'bedrock', 'nous', 'commandcode', 'modelscope',
       'aihubmix', 'pipellm', '302ai', 'cherryin', 'yylx', 'typesafe', 'vercel-jev', 'cloudflare-jev',
       'bailian-decision', 'qwen-decision', 'omlx', 'mlx-serve', 'remote-magpie']) {

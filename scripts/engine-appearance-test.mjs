@@ -243,7 +243,20 @@ try {
     assert.equal(await frame.locator('#view-plugins .pm-find input').isVisible(), true)
     assert.equal(await frame.locator('#view-plugins .pm-manual button[type=submit]').isVisible(), true)
     await frame.locator('#view-plugins .pm-card').filter({ hasText: 'Searchable fixture' }).waitFor()
+    // The market is the magpie community's, and the page says so in the
+    // reader's language on every tab that offers third-party code.
+    const source = frame.locator('#view-plugins > .ofm-plugin-source')
+    await source.waitFor({ state: 'visible' })
+    assert.match(await source.innerText(), /magpie 社区|magpie community/)
+    assert.match(await source.innerText(), /Our Free Model/)
+    assert.equal(await source.evaluate(node => node.parentElement.id), 'view-plugins')
   }
+  await frame.evaluate(() => document.querySelectorAll('#view-plugins .lib-tabs .opt')[0].click())
+  await frame.locator('#view-plugins .pm-body').waitFor({ state: 'attached' })
+  assert.equal(await frame.locator('#view-plugins > .ofm-plugin-source').count(), 0,
+    'the built-in switches are the engine\'s own, not the community market')
+  await frame.evaluate(() => document.querySelectorAll('#view-plugins .lib-tabs .opt')[1].click())
+  await frame.locator('#view-plugins > .ofm-plugin-source').waitFor({ state: 'visible' })
   await frame.locator('#view-plugins .pm-find input').fill('Searchable')
   await frame.locator('#view-plugins .pm-card').filter({ hasText: 'Searchable fixture' }).waitFor()
   await frame.waitForFunction(() => document.querySelectorAll('#view-plugins .pm-card').length === 1)

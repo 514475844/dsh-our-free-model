@@ -1,5 +1,6 @@
 import { listProviders, getProvider } from '../../src/providers/index.js'
 import { fetchProviderModels, testProvider } from '../../src/aggregate.js'
+import { isDeniedChannel } from '../../src/magpie-policy.js'
 
 const fail = message => Object.assign(new Error(message), { statusCode: 400 })
 const modelsOf = value => {
@@ -23,6 +24,9 @@ export function publicProviders(section) {
 export function createProviderManagement({ stores, runtime, persist }) {
   const get = id => {
     if (typeof id !== 'string') throw fail('请选择供应商')
+    // A channel this build does not offer is unknown here, exactly as it is
+    // absent from the directory above.
+    if (isDeniedChannel(id)) throw fail('此渠道不在本应用的提供范围内')
     const provider = getProvider(id)
     if (!provider) throw fail('未知供应商')
     return provider

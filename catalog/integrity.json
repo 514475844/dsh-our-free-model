@@ -1,5 +1,5 @@
 {
-  "version": "2.5.9",
+  "version": "2.6.0",
   "algorithm": "sha256",
   "files": [
     {
@@ -14,8 +14,8 @@
     },
     {
       "path": "client.js",
-      "size": 558000,
-      "sha256": "c0d1105a57302fb1f2a833bfe82b5e33d66cb5d94ea02a14375457fe9aa0cb57"
+      "size": 562161,
+      "sha256": "d02a3180c5ed69314d1c616ba0df36cba49dff4b29ff9c3ed14efd782331a72f"
     },
     {
       "path": "cordis.patch.yml",
@@ -29,8 +29,8 @@
     },
     {
       "path": "index.js",
-      "size": 118985,
-      "sha256": "10a2a632bca3e3a492f2e4099d311d5c6e902205c6f8ee6ae9e419cf63150dad"
+      "size": 119524,
+      "sha256": "780a00aef08cff3d517c917c66d664f93b7d32d1dee8e3026aa5f9f95dc51c29"
     },
     {
       "path": "LICENSE",
@@ -50,12 +50,12 @@
     {
       "path": "package.json",
       "size": 3008,
-      "sha256": "d616b7878a92cf0e268d013a0e9c207bb8d65fe779dc1d3943fe78c6b56b0ee5"
+      "sha256": "9aee239f80cf52cdd208af6d3cf331801a3a5dae8a0d90cf64ca8b1f906bf0cd"
     },
     {
       "path": "src/adapter.js",
-      "size": 46863,
-      "sha256": "5f5b725e8415a1dd77424e71d23db203d5bf62f190083ae406023065652cb9ca"
+      "size": 47053,
+      "sha256": "fd943833bd9f6a7b634d0b76dd5e7aa45abc3037fe4862bda7119b547f08d8cf"
     },
     {
       "path": "src/aggregate.js",
@@ -106,6 +106,11 @@
       "path": "src/deferred-response.js",
       "size": 1639,
       "sha256": "6a2cd40fc63a1a18e36be7ce32ca86aeae117eb2e06185879a2b38d451664fae"
+    },
+    {
+      "path": "src/disclaimer.js",
+      "size": 3364,
+      "sha256": "33842ca00e9f13fe8d38b0a5490016120bc468e4285634b237765e28b8020f28"
     },
     {
       "path": "src/eac-login.js",
@@ -184,13 +189,18 @@
     },
     {
       "path": "src/magpie-engine.js",
-      "size": 47165,
-      "sha256": "6b3913a95a868478a9a495f99a33713486aa819d826bb5e9e33c2d9ad2a36a0a"
+      "size": 52347,
+      "sha256": "34e1882a121e10af6b01ffb4c4e3f9eb5866b0ea909160b5ea6e0eb8f96d24a6"
     },
     {
       "path": "src/magpie-models.js",
-      "size": 4940,
-      "sha256": "28e7641ef89c55f2d3b8a4aedfe687f9117c0d4aa1e5fb033c1e32febb002429"
+      "size": 5187,
+      "sha256": "e6e4261a6b0b8d5e290618f493c8e18c956d558040e8a36ee01de78973c5c01a"
+    },
+    {
+      "path": "src/magpie-policy.js",
+      "size": 10085,
+      "sha256": "1434ff055d7c1c49c03df62a12f4da844a852de025f0fc951a3c98b3a9c7620f"
     },
     {
       "path": "src/messages.js",
@@ -219,8 +229,8 @@
     },
     {
       "path": "src/providers/index.js",
-      "size": 9110,
-      "sha256": "8c3255eb32f427ec879fbe00e2366a6022467ba0f3ff18fcdcf30f148424313e"
+      "size": 9780,
+      "sha256": "f8a08a3520f0ed71aafac891eb96ddd26b50a53f9a5d2738e1994afe031af578"
     },
     {
       "path": "src/providers/registry.json",
@@ -259,8 +269,8 @@
     },
     {
       "path": "src/store.js",
-      "size": 24397,
-      "sha256": "ce4094ba0a3edb2dbab1411a1f7f41f3e392f71354168b05aa98dab49c893696"
+      "size": 24502,
+      "sha256": "a9c9e6bacae9d1d75947b01435c5b43204755b626831d948bafc085e3063d80d"
     },
     {
       "path": "src/stream.js",
@@ -274,8 +284,8 @@
     },
     {
       "path": "src/subscription-completion.js",
-      "size": 24383,
-      "sha256": "d80f372304bf36ab6fe68ac487b3163bc924d93cbfe3c8dae44ff03ed9ca3fe3"
+      "size": 24791,
+      "sha256": "1e520480ebfb718c20fddf799d1b83c4e04ff7440c717501b378f3538b594b1b"
     },
     {
       "path": "src/subscriptions.js",

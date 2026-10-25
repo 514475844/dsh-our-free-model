@@ -10,6 +10,7 @@ import { createWorkbench } from './workbench.mjs'
 import { createProviderManagement } from './providers.mjs'
 import { createWorkbenchLibrary } from './library.mjs'
 import { createRoutingManagement } from './routing.mjs'
+import { DISCLAIMER, DISCLAIMER_VERSION, disclaimerAcknowledged } from '../../src/disclaimer.js'
 
 const PREFIX = '/api/management'
 const BOOTSTRAP_MS = 10 * 60_000
@@ -339,6 +340,11 @@ export function createManagement({ stores, runtime, channels, eac, subscriptions
       if (result.error) throw fail(502, result.error)
       if (result.ok === false) throw fail(500, '无法移除本地授权')
       json(res, 200, result)
+    } else if (method === 'GET' && pathname === `${PREFIX}/disclaimer`) {
+      json(res, 200, { ...DISCLAIMER, acknowledged: disclaimerAcknowledged(stores.settings.get()) })
+    } else if (method === 'POST' && pathname === `${PREFIX}/disclaimer/ack`) {
+      persist({ disclaimerAck: DISCLAIMER_VERSION })
+      json(res, 200, { ok: true, acknowledged: true })
     } else if (method === 'POST' && pathname === `${PREFIX}/settings`) {
       const patch = validateSettings(await readBody(req))
       persist(patch)

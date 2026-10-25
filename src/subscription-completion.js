@@ -451,8 +451,17 @@ export function createSubscriptionRuntime({
         ...(firstDelta === undefined ? {} : { ttftMs: firstDelta - started }),
       }
       try {
-        if (typeof stats?.edit === 'function') { recordUsage(stats, record); recordTurn(stats, record) }
-        else { stats?.recordUsage?.(record); stats?.recordTurn?.(record) }
+        // Physical usage always belongs to the model that served the call. The
+        // logical turn belongs to whoever owns the turn: a combo chain records
+        // its own single turn, so a member reached through one must not add a
+        // second (request.recordTurn is false there).
+        if (typeof stats?.edit === 'function') {
+          recordUsage(stats, record)
+          if (request.recordTurn !== false) recordTurn(stats, record)
+        } else {
+          stats?.recordUsage?.(record)
+          if (request.recordTurn !== false) stats?.recordTurn?.(record)
+        }
       } catch { /* Telemetry must not alter a completed model turn. */ }
       if (thrown) {
         try { logger?.warn?.(`Subscription completion failed (${thrown.code})`) } catch {}

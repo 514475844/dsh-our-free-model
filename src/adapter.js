@@ -676,7 +676,7 @@ export class FreeModelAdapter {
     }
   }
 
-  /** The subscription helper owns physical usage and its own turn accounting. */
+  /** The subscription helper owns physical usage; the caller owns the turn. */
   async * runSubscription(options, entry, plan) {
     let answered = false
     let terminal = false
@@ -690,6 +690,9 @@ export class FreeModelAdapter {
         toolChoice: subscriptionToolChoice(options.toolChoice, options.tools),
         maxTokens: Math.min(options.maxTokens ?? entry.maxOutput, entry.maxOutput),
         messages: repairToolPairing(options.messages ?? []),
+        // A combo chain records one logical turn for the whole chain; letting
+        // the member record its own would count that turn twice.
+        recordTurn: plan.recordTurn !== false,
       }
       stream = subscriptionChunks(this.deps.subscriptionRuntime, request)
       while (true) {

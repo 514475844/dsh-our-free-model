@@ -1,5 +1,6 @@
 import { createSubscriptionRuntime } from './subscription-completion.js'
 import { loopbackFetch } from './loopback-fetch.js'
+import { deniedModel } from './magpie-policy.js'
 
 const PREFIX = 'subscription:magpie/'
 
@@ -75,6 +76,9 @@ export function createMagpieModels({ engine, stats, logger, onChanged = () => {}
         const seen = new Set()
         for (const row of payload.data) {
           if (typeof row?.id !== 'string' || !row.id || /[\r\n\0]/.test(row.id) || seen.has(row.id)) continue
+          // A model the engine serves through a channel this build does not
+          // offer stays out, whether the plugin was installed before or after.
+          if (deniedModel(row)) continue
           seen.add(row.id)
           next.push({
             id: row.id, name: typeof row.display_name === 'string' ? row.display_name
