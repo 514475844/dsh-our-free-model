@@ -466,19 +466,30 @@ function isTransientDownloadError(error) {
  *  commit falls back to the same commit on raw and through the raw proxy — the
  *  same SHA, a different transport. Only pinned commits get that fallback: a
  *  mutable branch's raw bytes could move between the manifest read and the file
- *  download, which is exactly what pinning exists to prevent. */
+ *  download, which is exactly what pinning exists to prevent.
+ *
+ *  Both jsDelivr edges are recognized as origins here, because the manifest may
+ *  itself have been discovered on either one: a gcore-sourced manifest composes
+ *  gcore file URLs, and those need the same fallbacks. */
 function stagedFileSources(manifestUrl, manifest, relativePath) {
   const file = fileUrlOf(manifestUrl, manifest, relativePath)
   const url = new URL(file)
   const prefix = `/gh/${REPO}@`
-  if (url.protocol !== 'https:' || url.hostname !== 'cdn.jsdelivr.net' || url.port
+  const jsdelivr = url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'gcore.jsdelivr.net'
+  if (url.protocol !== 'https:' || !jsdelivr || url.port
     || url.username || url.password || !url.pathname.startsWith(prefix)
     || !/^[a-f0-9]{40}\//.test(url.pathname.slice(prefix.length))) return [file]
   const sha = url.pathname.slice(prefix.length).split('/')[0]
+  const rest = url.pathname.slice(prefix.length + sha.length + 1)
+  const cdn = new URL(url)
+  cdn.hostname = 'cdn.jsdelivr.net'
   const gcore = new URL(url)
   gcore.hostname = 'gcore.jsdelivr.net'
-  const raw = `https://raw.githubusercontent.com/${REPO}/${sha}/${url.pathname.slice(prefix.length + sha.length + 1)}`
-  return [file, gcore.href, raw, viaRawProxy(`${REPO}/${sha}/${url.pathname.slice(prefix.length + sha.length + 1)}`)]
+  const raw = `https://raw.githubusercontent.com/${REPO}/${sha}/${rest}`
+  // Keep the origin that was actually asked first, then the other edge, then the
+  // two raw transports at the same pinned commit.
+  const others = [cdn.href, gcore.href].filter(href => href !== file)
+  return [file, ...others, raw, viaRawProxy(`${REPO}/${sha}/${rest}`)]
 }
 
 export async function stageRelease({ manifest, manifestUrl, stageDir, fetchImpl = fetch, concurrency = 4, onProgress = () => {}, timeoutMs = 30000 }) {
