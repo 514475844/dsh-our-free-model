@@ -11,6 +11,8 @@ import { createStandaloneEac } from './eac.mjs'
 import { createChannelRuntime } from './channels/runtime.mjs'
 import { createSubscriptions } from '../../src/subscriptions.js'
 import { createSubscriptionRuntime } from '../../src/subscription-completion.js'
+import { createMagpieEngine } from '../../src/magpie-engine.js'
+import { combineSubscriptionRuntimes, createMagpieModels } from '../../src/magpie-models.js'
 
 const PRODUCT = 'our-free-model-standalone'
 const VERSION = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
@@ -129,6 +131,8 @@ export async function startStandalone({
   let management
   let channels
   let subscriptions
+  let magpieEngine
+  let magpieModels
   let eac
   let timer
   let refreshInFlight
@@ -244,10 +248,18 @@ export async function startStandalone({
     })
     subscriptions = createSubscriptions({ dataDir, ...subscriptionOptions })
     const subscriptionRuntime = createSubscriptionRuntime({ subscriptions, stats: stores.stats, logger })
+    // The model workspace: the same embedded engine the plugin's settings page
+    // uses, so both products answer "which providers, which models" the same way.
+    magpieEngine = createMagpieEngine({ dataDir, logger })
+    magpieModels = createMagpieModels({
+      engine: magpieEngine, stats: stores.stats, logger,
+      onChanged: () => runtime?.syncAggregateCatalog?.(),
+    })
+    const combinedSubscriptionRuntime = combineSubscriptionRuntimes(magpieModels, subscriptionRuntime)
     runtime = createModelRuntime({
       ...stores, logger, attributionUserAgent: `${PRODUCT}/${VERSION}`,
       sealedCredential: eac.credential,
-      subscriptionRuntime,
+      subscriptionRuntime: combinedSubscriptionRuntime,
     })
     channels = await createChannelRuntime({ dataDir, logger, stats: stores.stats })
     const core = runtime
@@ -266,12 +278,15 @@ export async function startStandalone({
     }
     management = createManagement({
       stores, runtime, channels, eac, subscriptions, workbenchOptions,
+      magpieEngine, magpieModels,
+      onEngineStarted: () => { settings.update({ magpieEnabled: true }); settings.flush() },
+      onSubscriptionsChanged: () => runtime?.syncAggregateCatalog?.(),
       info: () => ({
         product: PRODUCT, version: VERSION, dataDir,
         baseUrl: `http://${host === '::1' ? '[::1]' : host}:${listener?.port ?? requestedPort}`,
         automaticRefresh: refresh,
         networkMode: process.env.OFM_TEST_UPSTREAM ? 'fixture' : 'live',
-        capabilities: { anonymous: true, kilo: true, eac: true, accountChannels: true, webUi: true, lan: true },
+        capabilities: { anonymous: true, kilo: true, eac: true, accountChannels: true, webUi: true, lan: true, modelWorkspace: true },
         lan: lanState(),
       }),
       onSettingsChanged: async () => {
@@ -293,6 +308,14 @@ export async function startStandalone({
     management.setPort(listener.port)
     settings.update({ standalonePort: listener.port })
     settings.flush()
+    // Resume the workspace only when it was running at the last shutdown: the
+    // engine is a child process, and starting one nobody asked for would spend
+    // memory on every launch.
+    if (settings.get().magpieEnabled === true) {
+      void magpieEngine.start().then(() => magpieModels.refresh()).catch(() => {
+        logger.warn?.('our-free-model standalone: model workspace could not resume')
+      })
+    }
     await reconcileRelay()
 
     function scheduleRefresh() {
@@ -330,11 +353,13 @@ export async function startStandalone({
         clearTimeout(timer)
         const managementClosing = management.dispose()
         eac.dispose()
+        magpieModels?.close()
+        const engineClosing = magpieEngine?.close()
         runtime.dispose()
         closing = (async () => {
           try {
             await relayChanges
-            await Promise.all([managementClosing, closeRelay(), listener.close(), channels.close()])
+            await Promise.all([managementClosing, closeRelay(), listener.close(), channels.close(), engineClosing])
           } finally {
             try { stores.dispose() } finally { await releaseLock() }
           }
@@ -347,6 +372,8 @@ export async function startStandalone({
     clearTimeout(timer)
     await management?.dispose()
     eac?.dispose()
+    magpieModels?.close()
+    await magpieEngine?.close()
     runtime?.dispose()
     await relayChanges
     await closeRelay()

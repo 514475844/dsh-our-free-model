@@ -8,6 +8,7 @@ import type { Host, Page, Summary } from '../types'
 const navigation = [
   { label: '工作空间', items: [
     { id: 'overview', name: '概览', icon: LayoutDashboard },
+    { id: 'workspace', name: '模型工作台', icon: PanelsTopLeft },
     { id: 'agents', name: '客户端与订阅', icon: Monitor },
     { id: 'models', name: '模型清单', icon: Boxes },
     { id: 'usage', name: '用量统计', icon: Activity },
@@ -71,7 +72,7 @@ export function ThemeToggle() {
 }
 
 export const pageNames: Record<Page, string> = {
-  overview: '概览', models: '模型清单', usage: '用量统计', channels: 'EAC router',
+  overview: '概览', workspace: '模型工作台', models: '模型清单', usage: '用量统计', channels: 'EAC router',
   agents: '客户端与订阅', providers: '聚合渠道', library: '资源库', routing: '路由组',
   eac: 'EAC 协付渠道', settings: '服务设置', connection: 'API 接入', sponsor: '来自赞助商的广告',
 }

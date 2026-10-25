@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0",
+  "version": "2.7.0",
   "algorithm": "sha256",
   "files": [
     {
@@ -50,7 +50,7 @@
     {
       "path": "package.json",
       "size": 3008,
-      "sha256": "9aee239f80cf52cdd208af6d3cf331801a3a5dae8a0d90cf64ca8b1f906bf0cd"
+      "sha256": "17b595f748d875e9c0f1a76cb0d13865aeb61467202aaac2bef02099ae0cbd60"
     },
     {
       "path": "src/adapter.js",
@@ -189,8 +189,8 @@
     },
     {
       "path": "src/magpie-engine.js",
-      "size": 52347,
-      "sha256": "34e1882a121e10af6b01ffb4c4e3f9eb5866b0ea909160b5ea6e0eb8f96d24a6"
+      "size": 52631,
+      "sha256": "18c18bd604aa678d1332f8029efe38168467a8253ce81436cac0395fb9817861"
     },
     {
       "path": "src/magpie-models.js",

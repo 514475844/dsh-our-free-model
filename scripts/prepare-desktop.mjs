@@ -37,6 +37,19 @@ export function stageDesktopService(destination) {
   copy('packages/standalone/package.json')
   copy('packages/desktop/service-host.mjs')
   for (const name of ['qoder-auth-wasm.wasm', 'LICENSE', 'NOTICE.md']) copy(`vendor/channel-pack/${name}`)
+  // The model workspace runs the same pinned engine the plugin ships, so the
+  // desktop build carries that binary and its manifest. `src/magpie-engine.js`
+  // resolves `../vendor/magpie/` from its own directory, which inside this
+  // staged tree is `resources/vendor/magpie/`.
+  for (const name of ['engine.json', 'LICENSE', 'NOTICE.md']) copy(`vendor/magpie/${name}`, `../vendor/magpie/${name}`)
+  const target = `${process.platform}-${process.arch}`
+  const binaries = JSON.parse(fs.readFileSync(path.join(repositoryRoot, 'vendor/magpie/engine.json'), 'utf8')).binaries ?? {}
+  const binary = binaries[target]
+  if (!binary || typeof binary.path !== 'string') {
+    throw new Error(`模型工作台需要 ${target} 的引擎二进制；先运行 node scripts/build-magpie-engine.mjs`)
+  }
+  copy(`vendor/magpie/${binary.path}`, `../vendor/magpie/${binary.path}`)
+  copy('icon.svg', '../icon.svg')
   copy('LICENSE')
   copy('scripts/standalone-third-party.txt', 'THIRD_PARTY_NOTICES.txt')
   fs.writeFileSync(path.join(destination, 'package.json'), JSON.stringify({ private: true, type: 'module' }) + '\n')

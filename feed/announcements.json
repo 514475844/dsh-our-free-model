@@ -2,10 +2,21 @@
   "$schema": "./announcements.schema.md",
   "announcements": [
     {
+      "id": "2026-10-25-v2.7.0-desktop-workspace",
+      "title": "v2.7.0：桌面端接入同款模型工作台",
+      "level": "update",
+      "pinned": true,
+      "createdAt": "2026-10-25T08:00:00Z",
+      "link": {
+        "url": "https://github.com/Ebony-Vinyl/dsh-our-free-model/releases/tag/v2.7.0",
+        "label": "查看插件更新说明"
+      },
+      "html": "<p><b>2.7.0 让桌面端也拥有同款模型工作台。</b>桌面控制台新增「模型工作台」页，内嵌与插件端相同的 magpie 引擎：同一套渠道与账号管理、同一份模型清单、同一主题跟随与全屏。工作台启动后其模型会并入聚合清单，与订阅车道一起出现在模型选择器里；渠道排除策略（WorkBuddy 与华为云 Huawei Cloud）在两端一致。桌面安装包已内置该引擎二进制。</p>"
+    },
+    {
       "id": "2026-10-25-v2.6.0-plugin-release",
       "title": "v2.6.0：模型工作台、订阅车道与原生 Gemini 接入，移除 WorkBuddy 与华为云渠道",
       "level": "update",
-      "pinned": true,
       "createdAt": "2026-10-25T00:00:00Z",
       "link": {
         "url": "https://github.com/Ebony-Vinyl/dsh-our-free-model/releases/tag/v2.6.0",
