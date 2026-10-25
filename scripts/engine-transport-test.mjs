@@ -7,6 +7,10 @@ import path from 'node:path'
 import { loopbackFetch } from '../src/loopback-fetch.js'
 import { createMagpieEngine } from '../src/magpie-engine.js'
 import { createMagpieModels } from '../src/magpie-models.js'
+import { skipWithoutEngineBinary } from './lib/engine-binary.mjs'
+
+// The real engine is a per-platform build; a runner without one has nothing to start.
+if (skipWithoutEngineBinary('engine-transport')) process.exit(0)
 
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'ofm-engine-transport-'))
 const engine = createMagpieEngine({ dataDir: path.join(scratch, 'data') })

@@ -8,6 +8,9 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import http from 'node:http'
+import { skipWithoutEngineBinary } from './lib/engine-binary.mjs'
+
+if (skipWithoutEngineBinary('magpie-plugin')) process.exit(0)
 
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'ofm-magpie-plugin-'))
 const savedEnvironment = new Map()

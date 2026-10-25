@@ -18,6 +18,7 @@ import path from 'node:path'
 import { createMagpieEngine, MAGPIE_UI_PREFIX as prefix } from '../src/magpie-engine.js'
 import { createMagpieModels } from '../src/magpie-models.js'
 import { assertEngineMutation, deniedModel, filterEngineJSON, POLICY_REFUSED } from '../src/magpie-policy.js'
+import { pinnedEngineEntry } from './lib/engine-binary.mjs'
 
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'ofm-magpie-policy-'))
 const saved = new Map()
@@ -62,9 +63,13 @@ const denied = async (method, route, body) => {
 }
 
 try {
-  await engine.start()
-  const origin = await listen()
-  const base = origin + prefix
+  // The engine-backed groups need this platform's pinned binary; the pure-function
+  // group at the end does not, so it still runs on a platform with no binary.
+  const hasEngine = pinnedEngineEntry() !== null
+  if (hasEngine) await engine.start()
+  else console.log(`ok  engine-backed policy groups skipped: no pinned engine binary for ${process.platform}-${process.arch}`)
+  const origin = hasEngine ? await listen() : null
+  const base = origin === null ? null : origin + prefix
   const read = async route => {
     const response = await fetch(base + route)
     assert.equal(response.status, 200, route)
@@ -73,8 +78,12 @@ try {
   const post = async (route, body) => fetch(base + route, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
   })
+  const engineCheck = async (name, run) => {
+    if (!hasEngine) return
+    await check(name, run)
+  }
 
-  await check('the plugin market no longer offers the channel', async () => {
+  await engineCheck('the plugin market no longer offers the channel', async () => {
     const listings = await read('api/plugins/listings')
     assert(!mentions(listings.listings), 'listings must not name the channel')
     assert(listings.listings.length > 5, 'other listings stay')
@@ -84,7 +93,7 @@ try {
     assert(Array.isArray(market.state.plugins), 'market state stays intact')
   })
 
-  await check('npm search and metadata answers leave the package out', async () => {
+  await engineCheck('npm search and metadata answers leave the package out', async () => {
     const search = await read('api/plugins/search?q=' + encodeURIComponent('workbuddy'))
     assert(!search.hits.some(hit => mentions(hit.package)), 'search hits must not name the package')
     const npm = await read('api/plugins/npm?names=' + encodeURIComponent(`${PACKAGE},@magpie-community/opencode-zcode-auth`))
@@ -95,7 +104,7 @@ try {
     assert.match(await page.text(), /not offered by this build/)
   })
 
-  await check('installed-plugin and update listings stay clean', async () => {
+  await engineCheck('installed-plugin and update listings stay clean', async () => {
     for (const route of ['api/plugins', 'api/plugins/updates', 'api/plugin-pages', 'api/plugin-panels',
       'api/plugins/github', 'api/usage/quotas', 'api/login/usage']) {
       assert(!mentions(await read(route)), route)
@@ -104,7 +113,7 @@ try {
     assert(!mentions(checked), 'a version check must not name the channel')
   })
 
-  await check('providers keep the channel out of every route onto its plugin', async () => {
+  await engineCheck('providers keep the channel out of every route onto its plugin', async () => {
     const providers = await read('api/providers')
     assert(!Object.keys(providers.movesTo || {}).some(id => IDS.includes(id)), 'no move target')
     assert(!(providers.plugins || []).some(row => mentions(row)), 'no plugin subscription row')
@@ -116,7 +125,7 @@ try {
     assert.equal(providers.presets.length > 5, true, 'presets stay')
   })
 
-  await check('the Huawei Cloud channel is absent from the provider presets', async () => {
+  await engineCheck('the Huawei Cloud channel is absent from the provider presets', async () => {
     const providers = await read('api/providers')
     assert(!providers.presets.some(preset => preset.id === 'huaweicloud'), 'no Huawei Cloud preset')
     assert(!JSON.stringify(providers.presets).toLowerCase().includes('huawei'), 'no Huawei Cloud name')
@@ -125,7 +134,7 @@ try {
     assert(!Object.hasOwn(upstream.providers ?? {}, 'huaweicloud'), 'vendor status leaves the id out')
   })
 
-  await check('saving a provider from the excluded preset is refused', async () => {
+  await engineCheck('saving a provider from the excluded preset is refused', async () => {
     assert(await denied('POST', '/api/provider/save', { preset: 'huaweicloud', key: 'fixture' }), 'preset save')
     assert(await denied('POST', '/api/provider/save', { id: 'huaweicloud', name: 'Huawei Cloud', key: 'fixture' }), 'named save')
     const other = await post('api/provider/save', { preset: 'moonshot-cn', key: 'fixture', name: 'OFM policy fixture' })
@@ -133,14 +142,14 @@ try {
     await other.text()
   })
 
-  await check('an import picker does not offer the channel', async () => {
+  await engineCheck('an import picker does not offer the channel', async () => {
     const sources = await read('api/importapps')
     for (const source of sources) {
       assert(!(source.items || []).some(item => IDS.includes(item?.provider?.id)), source.id)
     }
   })
 
-  await check('the engine refuses to install, enable or sign in the channel', async () => {
+  await engineCheck('the engine refuses to install, enable or sign in the channel', async () => {
     assert(await denied('POST', '/api/plugins/add', { spec: PACKAGE }), 'add')
     assert(await denied('POST', '/api/plugins/upgrade', { spec: PACKAGE }), 'upgrade')
     assert(await denied('POST', '/api/plugins/off', { spec: PACKAGE, off: false }), 're-enable')
@@ -152,7 +161,7 @@ try {
     assert(await denied('POST', '/api/provider/move', { id: IDS[0] }), 'move')
   })
 
-  await check('the way out of an earlier install is left open', async () => {
+  await engineCheck('the way out of an earlier install is left open', async () => {
     // Hiding the channel must not trap a plugin installed before this change:
     // switching it off and removing it are not refused by policy (the engine
     // answers for a plugin it doesn't have, which is a different failure).
@@ -170,7 +179,7 @@ try {
     }
   })
 
-  await check('the refusal is enforced through the browser proxy too', async () => {
+  await engineCheck('the refusal is enforced through the browser proxy too', async () => {
     for (const [route, body] of [
       ['api/plugins/add', { spec: PACKAGE }],
       ['api/signin', { agent: IDS[0] }],
@@ -185,7 +194,7 @@ try {
     assert.equal(page.status, 403)
   })
 
-  await check('unrelated work on the same routes still reaches the engine', async () => {
+  await engineCheck('unrelated work on the same routes still reaches the engine', async () => {
     const other = await post('api/plugins/add', { spec: '@ofm-absent-package' })
     assert.notEqual(other.status, 403, 'an unrelated install is not refused by policy')
     const discovery = await post('api/settings/account-discovery', { off: true })
@@ -196,7 +205,7 @@ try {
     assert.equal(typeof settings.noAccountDiscovery, 'boolean', 'settings still answered')
   })
 
-  await check('a model served through the channel never reaches the published catalog', async () => {
+  await engineCheck('a model served through the channel never reaches the published catalog', async () => {
     const published = []
     const models = createMagpieModels({
       engine,
