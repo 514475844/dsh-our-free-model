@@ -1,24 +1,30 @@
 /**
  * Account channels this build does not offer.
  *
- * WorkBuddy's China build ("workbuddy", sold as the CodeBuddy plan) and its
- * international build ("workbuddy-ai") are not supported: the community plugin
- * that serves them signs requests as WorkBuddy's own desktop client, which is
- * a risk this product will not carry. The engine is a pinned binary whose
- * plugin market is fetched at run time, so the exclusion is enforced here, at
- * the management boundary this application owns, rather than in the engine.
+ * WorkBuddy is sold under two names and ships in two builds: the China build
+ * ("workbuddy", also marketed as CodeBuddy) and the international build
+ * ("workbuddy-ai"). Neither is offered: the community plugin that serves them
+ * signs requests as WorkBuddy's own desktop client, which is a risk this
+ * product will not carry. The engine is a pinned binary whose plugin market is
+ * fetched at run time, so the exclusion is enforced here, at the management
+ * boundary this application owns, rather than in the engine.
  *
  * Huawei Cloud MaaS ("huaweicloud", its Token Plan preset) is likewise not
  * offered: this build carries no Huawei channel, and the engine's pinned preset
  * list is the one surface that would otherwise reintroduce it.
  *
  * A channel is denied by its subscription id, by the preset that names it, by
- * the package that serves it, and by any name carrying "WorkBuddy" — a
- * third-party plugin can sign in to the same provider under any package name.
+ * the package that serves it, and by any name carrying one of the aliases below
+ * — a third-party plugin can sign in to the same provider under any package
+ * name, and the China build is listed under "CodeBuddy" as often as under
+ * "WorkBuddy".
  */
 
-const DENIED_IDS = new Set(['workbuddy', 'workbuddy-ai', 'huaweicloud'])
-const DENIED_TEXT = /workbuddy|huaweicloud|huawei[\s-]*cloud|modelarts-maas/i
+const DENIED_IDS = new Set(['workbuddy', 'workbuddy-ai', 'huaweicloud', 'codebuddy', 'codebuddy-cn', 'codearts'])
+// Aliases, not a product name filter: every spelling a package, preset, agent
+// or provider row could carry for one of these channels. "CodeArts" is Huawei
+// Cloud's own coding plan, served by a community plugin rather than a preset.
+const DENIED_TEXT = /workbuddy|codebuddy|huaweicloud|huawei[\s-]*cloud|modelarts|codearts|华为云|码道/i
 export const POLICY_REFUSED = 'WorkBuddy and Huawei Cloud are not offered by this build'
 
 /**
@@ -71,9 +77,10 @@ function filterProviders(state) {
   if (state.movesTo && typeof state.movesTo === 'object') {
     for (const id of Object.keys(state.movesTo)) if (deniedId(id)) delete state.movesTo[id]
   }
-  // state.movable is kept whole on purpose: the engine's add sheet hides a
-  // deprecated built-in only while it has no account, and that test reads this
-  // list. Dropping the id would surface the very tile it is meant to hide.
+  // state.movable is kept whole on purpose: the page reads it to decide a
+  // built-in is deprecated and hidden, so dropping the id would surface the very
+  // tile it is meant to hide. The way *onto* it is withdrawn above (`movesTo`,
+  // `plugins`, `unmoved`), which is what a user can act on.
   return state
 }
 

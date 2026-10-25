@@ -134,6 +134,57 @@ try {
     assert(!Object.hasOwn(upstream.providers ?? {}, 'huaweicloud'), 'vendor status leaves the id out')
   })
 
+  await engineCheck('all three excluded channels are absent, under every name they are sold as', async () => {
+    // The China build is listed as "CodeBuddy" as often as "WorkBuddy", and the
+    // international one as "workbuddy-ai"; a package, preset or provider row
+    // could use any of them. None may reach a surface a user can act on.
+    const spellings = /workbuddy|codebuddy|huaweicloud|huawei[\s-]*cloud|modelarts|codearts|华为云|码道/i
+    const actionable = ['api/plugins', 'api/plugins/listings', 'api/plugins/market',
+      'api/plugins/updates', 'api/plugin-pages', 'api/plugin-panels', 'api/importapps', 'api/upstream',
+      'api/login/usage', 'api/usage/quotas']
+    for (const route of actionable) {
+      const answer = await read(route)
+      assert(!spellings.test(JSON.stringify(answer)), `${route} must not name an excluded channel`)
+    }
+    // /api/providers keeps the engine's own deprecation list whole. That list is
+    // what marks a built-in as deprecated and hides its add-sheet tile; removing
+    // an id from it would surface the tile. What matters is that no route onto
+    // the channel survives: no preset, no move target, no plugin row.
+    const providers = await read('api/providers')
+    assert(!providers.presets.some(preset => spellings.test(preset.id) || spellings.test(preset.name)),
+      'no preset offers an excluded channel')
+    assert(!Object.keys(providers.movesTo ?? {}).some(id => spellings.test(id)),
+      'no move target reaches an excluded plugin')
+    assert(!(providers.plugins ?? []).some(row => spellings.test(JSON.stringify(row))),
+      'no plugin row offers an excluded channel')
+    assert(!(providers.unmoved ?? []).some(row => spellings.test(JSON.stringify(row))),
+      'no retired built-in is offered')
+    // And each alias is refused where a mutation could enable one.
+    for (const [route, body] of [
+      ['/api/provider/save', { preset: 'codebuddy', key: 'fixture' }],
+      ['/api/provider/save', { id: 'codebuddy', name: 'CodeBuddy', key: 'fixture' }],
+      ['/api/provider/save', { preset: 'workbuddy-ai', key: 'fixture' }],
+      ['/api/provider/save', { preset: 'codearts', key: 'fixture' }],
+      ['/api/plugins/add', { spec: '@magpie-community/opencode-codebuddy-auth' }],
+      ['/api/plugins/add', { spec: '@magpie-community/opencode-codearts-auth' }],
+      ['/api/signin', { agent: 'codebuddy' }],
+      ['/api/signin', { agent: 'codearts' }],
+    ]) assert(await denied('POST', route, body), `${route} ${JSON.stringify(body)}`)
+  })
+
+  await check('the disclaimer names all three channels and states the responsibility boundary', async () => {
+    const { DISCLAIMER, EXCLUDED_CHANNELS } = await import('../src/disclaimer.js')
+    const named = EXCLUDED_CHANNELS.join(' ').toLowerCase()
+    for (const channel of ['workbuddy', 'workbuddy-ai', 'codebuddy', 'huaweicloud']) {
+      assert.match(named, new RegExp(channel), `the disclaimer names ${channel}`)
+    }
+    const body = DISCLAIMER.sections.map(section => section.body).join(' ')
+    assert.match(body, /不包含、也不提供/, 'it says the build does not provide them')
+    assert.match(body, /与本项目作者及团队无关/, 'it states the team is not responsible')
+    assert.match(body, /个人学习/, 'it states the project purpose')
+    assert.match(body, /自行承担/, 'it places the consequences on the user')
+  })
+
   await engineCheck('saving a provider from the excluded preset is refused', async () => {
     assert(await denied('POST', '/api/provider/save', { preset: 'huaweicloud', key: 'fixture' }), 'preset save')
     assert(await denied('POST', '/api/provider/save', { id: 'huaweicloud', name: 'Huawei Cloud', key: 'fixture' }), 'named save')

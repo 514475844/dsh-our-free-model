@@ -15,10 +15,14 @@
  * purpose plainly, because that is the honest description of what it is.
  */
 
-export const DISCLAIMER_VERSION = 1
+export const DISCLAIMER_VERSION = 2
 
 /** Channels this build does not offer, named for the reader. */
-export const EXCLUDED_CHANNELS = Object.freeze(['WorkBuddy（含国际版 workbuddy-ai）', 'Huawei Cloud MaaS（华为云，含 Token Plan）'])
+export const EXCLUDED_CHANNELS = Object.freeze([
+  'WorkBuddy 国内版（workbuddy，亦称 CodeBuddy）',
+  'WorkBuddy 国际版（workbuddy-ai）',
+  '华为云 Huawei Cloud MaaS（huaweicloud，含 Token Plan）',
+])
 
 export const DISCLAIMER = Object.freeze({
   version: DISCLAIMER_VERSION,
@@ -28,13 +32,13 @@ export const DISCLAIMER = Object.freeze({
   sections: Object.freeze([
     {
       id: 'excluded',
-      heading: '本插件不提供这些渠道',
-      body: '本插件不包含、也不提供 WorkBuddy（含国际版 workbuddy-ai）与华为云 Huawei Cloud MaaS（含 Token Plan）渠道。目录中看不到它们不是故障：这是本项目的明确取舍，任何更新都不会重新引入。',
+      heading: '本插件不提供这三个渠道',
+      body: '本插件不包含、也不提供 WorkBuddy 国内版（workbuddy，亦称 CodeBuddy）、WorkBuddy 国际版（workbuddy-ai）与华为云 Huawei Cloud MaaS（huaweicloud，含 Token Plan）。这三者在插件端与桌面端均被移除：渠道列表、预设、登录入口、插件市场与模型目录里都不会出现，也无法通过导入配置或安装第三方插件启用。目录中看不到它们不是故障，是本项目的明确取舍，后续更新不会重新引入。',
     },
     {
       id: 'responsibility',
       heading: '使用第三方渠道与我们无关',
-      body: '你若通过任何方式使用上述渠道或其他第三方服务，包括自行配置地址、导入凭据、安装第三方插件或登录他人账号，均属于你的个人行为，与本项目作者及团队无关。我们不参与、不背书、也不对其可用性、合规性或后果承担任何责任。',
+      body: '你若在本插件之外通过任何方式使用上述渠道或其他第三方服务，包括自行配置地址、导入凭据、安装第三方软件或登录他人账号，均属于你的个人行为，与本项目作者及团队无关。我们不参与、不背书、不提供支持，也不对其可用性、合规性或任何后果承担任何责任。',
     },
     {
       id: 'accounts',
@@ -45,6 +49,11 @@ export const DISCLAIMER = Object.freeze({
       id: 'no-warranty',
       heading: '不提供任何担保',
       body: '本项目不对正确性、稳定性、适销性或特定用途适用性作任何明示或默示担保。使用本插件造成的任何直接或间接损失，作者与团队均不承担责任。请自行评估风险，并优先遵守所在地区的法律法规与服务商协议。',
+    },
+    {
+      id: 'lawful',
+      heading: '请合法合规使用',
+      body: '本项目仅用于个人学习与技术研究。请勿将其用于违反服务商条款、规避授权限制、批量滥用额度或其他违法用途。因使用方式不当引发的争议、索赔或法律责任，均由使用者自行承担。',
     },
   ]),
   accept: '我已阅读并了解',

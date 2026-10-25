@@ -76,7 +76,7 @@ try {
     const first = await api('/disclaimer')
     assert.equal(first.status, 200)
     assert.equal(first.body.acknowledged, false, 'a fresh install has not acknowledged it')
-    assert.equal(first.body.version, 1)
+    assert.equal(first.body.version, 2)
     assert.ok(Array.isArray(first.body.sections) && first.body.sections.length >= 3)
     const copy = JSON.stringify(first.body)
     assert.match(copy, /WorkBuddy/i, 'WorkBuddy is named')

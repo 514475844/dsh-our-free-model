@@ -1,7 +1,7 @@
 {
-  "version": "2.7.0",
+  "version": "2.7.1",
   "base": "../",
-  "publishedAt": "2026-10-25T07:36:03.566Z",
+  "publishedAt": "2026-10-25T08:41:19.455Z",
   "notes": "",
   "files": [
     {
@@ -52,7 +52,7 @@
     {
       "path": "package.json",
       "size": 3008,
-      "sha256": "17b595f748d875e9c0f1a76cb0d13865aeb61467202aaac2bef02099ae0cbd60"
+      "sha256": "748797d740d0fc3889de2bbd8f77f6678be712ad03620ebbac12bcfe82d8e858"
     },
     {
       "path": "src/adapter.js",
@@ -111,8 +111,8 @@
     },
     {
       "path": "src/disclaimer.js",
-      "size": 3364,
-      "sha256": "33842ca00e9f13fe8d38b0a5490016120bc468e4285634b237765e28b8020f28"
+      "size": 4069,
+      "sha256": "d15a828e4e0d29fbf82e3d309148bc7eee5e335abdf348727cd85be353d9f925"
     },
     {
       "path": "src/eac-login.js",
@@ -201,8 +201,8 @@
     },
     {
       "path": "src/magpie-policy.js",
-      "size": 10085,
-      "sha256": "1434ff055d7c1c49c03df62a12f4da844a852de025f0fc951a3c98b3a9c7620f"
+      "size": 10614,
+      "sha256": "ebc51b56cb071023429047b738b56007077cdabb36f31d910c04b85ab4211b13"
     },
     {
       "path": "src/messages.js",
@@ -470,5 +470,5 @@
       "sha256": "b2cbbd38d5461521f40d8fbd947bfa9be641481602eaec0f1fc5d29cca8d7e5f"
     }
   ],
-  "signature": "83P1+opEmFhIr+buYOfqiH05aT3xjDURYVjmHD965TONlTEjP/o8fxGm5NKAVzBw39GWmzqkxq/B1NLh9vV6Bg=="
+  "signature": "GdmX7ZQKQzb3nUdG62OzpQBfoONP6Zza2TFny73FCzTpusSGYnC5pTt3xsgPXX7HyMujhX+by5rhonwRc9VaBg=="
 }

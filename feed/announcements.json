@@ -2,10 +2,21 @@
   "$schema": "./announcements.schema.md",
   "announcements": [
     {
+      "id": "2026-10-25-v2.7.1-channel-exclusion",
+      "title": "v2.7.1：彻底移除 WorkBuddy 国内版/国际版与华为云渠道",
+      "level": "update",
+      "pinned": true,
+      "createdAt": "2026-10-25T10:00:00Z",
+      "link": {
+        "url": "https://github.com/Ebony-Vinyl/dsh-our-free-model/releases/tag/v2.7.1",
+        "label": "查看插件更新说明"
+      },
+      "html": "<p><b>2.7.1 收紧了渠道排除。</b>WorkBuddy 国内版（workbuddy，亦称 CodeBuddy）、国际版（workbuddy-ai）与华为云 Huawei Cloud MaaS（huaweicloud，含 Token Plan）以及华为云 CodeArts（码道）在插件端与桌面端均无法添加、登录或通过插件市场安装。本次补齐了 CodeBuddy 与 CodeArts 两个此前未覆盖的别名，并新增一份使用须知与免责声明，明确本插件为个人学习项目、不提供这些渠道、第三方渠道的使用与本团队无关。</p>"
+    },
+    {
       "id": "2026-10-25-v2.7.0-desktop-workspace",
       "title": "v2.7.0：桌面端接入同款模型工作台",
       "level": "update",
-      "pinned": true,
       "createdAt": "2026-10-25T08:00:00Z",
       "link": {
         "url": "https://github.com/Ebony-Vinyl/dsh-our-free-model/releases/tag/v2.7.0",
