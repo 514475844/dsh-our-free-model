@@ -7,7 +7,7 @@ export const repositoryRoot = fileURLToPath(new URL('..', import.meta.url))
 export const resourceDirectory = path.join(repositoryRoot, 'packages/desktop/src-tauri/resources')
 
 /** 明确选择应用资源，排除用户目录、工具索引、依赖及构建缓存。 */
-export function stageDesktopService(destination) {
+export function stageDesktopService(destination, { requireWorkspace = false } = {}) {
   fs.mkdirSync(destination, { recursive: true })
   const copy = (relative, target = relative) => {
     const source = path.join(repositoryRoot, relative)
@@ -45,10 +45,16 @@ export function stageDesktopService(destination) {
   const target = `${process.platform}-${process.arch}`
   const binaries = JSON.parse(fs.readFileSync(path.join(repositoryRoot, 'vendor/magpie/engine.json'), 'utf8')).binaries ?? {}
   const binary = binaries[target]
-  if (!binary || typeof binary.path !== 'string') {
+  if (binary && typeof binary.path === 'string') {
+    copy(`vendor/magpie/${binary.path}`, `../vendor/magpie/${binary.path}`)
+  } else if (requireWorkspace) {
+    // A real installer without the engine ships a workspace page that can never
+    // start, so packaging refuses. Staging alone (tests, source inspection) may
+    // run on a platform with no pinned build.
     throw new Error(`模型工作台需要 ${target} 的引擎二进制；先运行 node scripts/build-magpie-engine.mjs`)
+  } else {
+    console.log(`提示：${target} 没有引擎二进制，本次只生成不含模型工作台的服务资源`)
   }
-  copy(`vendor/magpie/${binary.path}`, `../vendor/magpie/${binary.path}`)
   copy('icon.svg', '../icon.svg')
   copy('LICENSE')
   copy('scripts/standalone-third-party.txt', 'THIRD_PARTY_NOTICES.txt')
@@ -81,7 +87,8 @@ export async function prepareDesktop({ nodeExecutable = process.execPath, nodeLi
   fs.writeFileSync(cache, license)
   // 只清理固定生成目录，绝不触及用户数据目录。
   fs.rmSync(resourceDirectory, { recursive: true, force: true })
-  stageDesktopService(path.join(resourceDirectory, 'service'))
+  // Packaging an installer: the workspace has to work, so the engine is required.
+  stageDesktopService(path.join(resourceDirectory, 'service'), { requireWorkspace: true })
   fs.mkdirSync(path.join(resourceDirectory, 'runtime'), { recursive: true })
   fs.copyFileSync(nodeExecutable, path.join(resourceDirectory, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node'))
   fs.writeFileSync(path.join(resourceDirectory, 'runtime/LICENSE'), license)

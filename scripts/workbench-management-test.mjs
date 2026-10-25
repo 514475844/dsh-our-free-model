@@ -5,6 +5,7 @@ import path from 'node:path'
 import http from 'node:http'
 import { once } from 'node:events'
 import { startStandalone } from '../packages/standalone/service.mjs'
+import { pinnedEngineEntry } from './lib/engine-binary.mjs'
 
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'ofm-workbench-http-'))
 const upstream = http.createServer(async (req, res) => {
@@ -157,6 +158,13 @@ try {
     assert.ok(!(await call('/v1/models')).body.data.some(row => row.id === group.id))
   })
   await check('the model workspace starts the real engine and serves its UI from this console', async () => {
+    // The workspace is an integration check against the pinned engine binary,
+    // which only exists for the platforms that were built. A runner without one
+    // has nothing to start, so this group reports that instead of failing.
+    if (pinnedEngineEntry() === null) {
+      console.log(`  ok  skipped: no pinned engine binary for ${process.platform}-${process.arch}`)
+      return
+    }
     // The desktop console carries the same embedded workspace as the plugin. It
     // must start the pinned engine, proxy the page under its own mount, and keep
     // that mount out of reach for anyone without a session.
