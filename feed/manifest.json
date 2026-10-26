@@ -1,7 +1,7 @@
 {
   "version": "2.7.1",
   "base": "../",
-  "publishedAt": "2026-10-25T09:06:46.944Z",
+  "publishedAt": "2026-10-26T03:55:31.157Z",
   "notes": "",
   "files": [
     {
@@ -226,8 +226,8 @@
     },
     {
       "path": "src/probe.js",
-      "size": 10628,
-      "sha256": "22ea1a51738d41f7309477ade8851bfff6c35af633de1e471cfc72d61d052115"
+      "size": 10826,
+      "sha256": "6c813cee69ae59acec82d802a51f6d64ef354d762236f52cc5a5942480d7074a"
     },
     {
       "path": "src/providers/index.js",
@@ -470,5 +470,5 @@
       "sha256": "b2cbbd38d5461521f40d8fbd947bfa9be641481602eaec0f1fc5d29cca8d7e5f"
     }
   ],
-  "signature": "lOBn4ZBE/XCDtMhGu1k3qn6+c1hUK5OYwhss4ZojlLGqDFM10M2/RV7kXQ21j2/S/y2htcrRIajN84KuT7BwCQ=="
+  "signature": "s9p899DmdiJiR8ujbe0eMUEsF1Mc/FXFnAN/fpRfhiGgMNhdUFMC8yNsMJPRfh/GaKizzwn3Ws2qzhTXMT7qBw=="
 }
