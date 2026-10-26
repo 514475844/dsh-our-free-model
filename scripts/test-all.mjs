@@ -31,11 +31,13 @@ if (!['all', 'contributor', 'release'].includes(options.mode)) {
   process.exit(1)
 }
 const { mode, only } = options
-const releaseSuites = new Set(['manifest', 'release', 'catalog'])
+const releaseSuites = new Set(['manifest', 'release', 'catalog', 'legacy-upgrade', 'engine-payload'])
 
 const suites = [
   ['manifest', 'build-manifest.mjs', ['--check']],
   ['release', 'release-e2e.mjs', []],
+  ['legacy-upgrade', 'legacy-upgrade-test.mjs', mode === 'contributor' ? [] : ['--production']],
+  ['engine-payload', 'engine-payload-test.mjs', []],
   ['release-preparation', 'release-preparation-test.mjs', []],
   ['client-lint', 'client-lint.mjs', []],
   ['sponsor', 'sponsor-test.mjs', []],
