@@ -31,6 +31,24 @@ const expectedParts = new Set()
 for (const [target, entry] of Object.entries(metadata.binaries)) {
   const binary = fs.readFileSync(path.join(root, 'vendor/magpie', entry.path))
   if (hash(binary) !== entry.sha256) throw new Error(`引擎摘要不匹配：${target}`)
+  if (checking) {
+    // Node/zlib 版本可能产生不同的 gzip 编码；检查已发布字节与原始引擎的一致性，
+    // 不要求另一平台的压缩器重新生成相同编码。
+    const value = entry.compressed
+    if (value?.algorithm !== 'gzip' || value.outputSize !== binary.length || !Array.isArray(value.parts)) throw new Error(`分片元数据无效：${target}`)
+    const chunks = value.parts.map((part, index) => {
+      const rel = `src/engine-parts/${target}.${String(index).padStart(3, '0')}.part`
+      if (part.path !== rel || part.size <= 0 || part.size > 4 * 1024 * 1024) throw new Error(`分片路径或大小无效：${target}`)
+      const bytes = fs.readFileSync(path.join(root, rel))
+      if (bytes.length !== part.size || hash(bytes) !== part.sha256) throw new Error(`分片内容不一致：${rel}`)
+      expectedParts.add(path.basename(rel))
+      return bytes
+    })
+    const compressed = Buffer.concat(chunks)
+    if (compressed.length !== value.size || hash(compressed) !== value.sha256
+      || !zlib.gunzipSync(compressed, { maxOutputLength: binary.length }).equals(binary)) throw new Error(`分片还原结果不一致：${target}`)
+    continue
+  }
   const compressed = zlib.gzipSync(binary, { level: 9 })
   const parts = []
   for (let offset = 0; offset < compressed.length; offset += 4 * 1024 * 1024) {
