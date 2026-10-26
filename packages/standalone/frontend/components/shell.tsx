@@ -1,4 +1,4 @@
-import { Coffee, Activity, Boxes, Cable, ChevronRight, Handshake, LayoutDashboard, LogOut, Moon, Network, Settings2, ShieldCheck, Sun } from 'lucide-react'
+import { Coffee, Activity, Boxes, Cable, ChevronRight, Handshake, LayoutDashboard, LogOut, Moon, Network, Settings2, ShieldCheck, Sun, Monitor, PanelsTopLeft, LibraryBig, Route } from 'lucide-react'
 import { useState } from 'react'
 import { flushSync } from 'react-dom'
 import brandMark from '../../../../icon.svg?inline'
@@ -8,11 +8,16 @@ import type { Host, Page, Summary } from '../types'
 const navigation = [
   { label: '工作空间', items: [
     { id: 'overview', name: '概览', icon: LayoutDashboard },
+    { id: 'workspace', name: '模型工作台', icon: PanelsTopLeft },
+    { id: 'agents', name: '客户端与订阅', icon: Monitor },
     { id: 'models', name: '模型清单', icon: Boxes },
     { id: 'usage', name: '用量统计', icon: Activity },
+    { id: 'library', name: '资源库', icon: LibraryBig },
   ] },
   { label: '渠道与连接', items: [
-    { id: 'channels', name: '免费账号渠道', icon: Network },
+    { id: 'providers', name: '聚合渠道', icon: PanelsTopLeft },
+    { id: 'routing', name: '路由组', icon: Route },
+    { id: 'channels', name: 'EAC router', icon: Network },
     { id: 'eac', name: 'EAC 协付渠道', icon: Handshake },
     { id: 'connection', name: 'API 接入', icon: Cable },
   ] },
@@ -67,11 +72,12 @@ export function ThemeToggle() {
 }
 
 export const pageNames: Record<Page, string> = {
-  overview: '概览', models: '模型清单', usage: '用量统计', channels: '免费账号渠道',
+  overview: '概览', workspace: '模型工作台', models: '模型清单', usage: '用量统计', channels: 'EAC router',
+  agents: '客户端与订阅', providers: '聚合渠道', library: '资源库', routing: '路由组',
   eac: 'EAC 协付渠道', settings: '服务设置', connection: 'API 接入', sponsor: '来自赞助商的广告',
 }
 
-export function Sidebar({ page, summary, host }: { page: Page; summary?: Summary; host: Host }) {
+export function Sidebar({ page, summary, host, onDisclaimer }: { page: Page; summary?: Summary; host: Host; onDisclaimer(): void }) {
   return <>
     <a className="console-brand" href="/" aria-label="Our Free Model 首页">
       <img className="console-mark" src={brandMark} alt="" width={34} height={36} />
@@ -92,6 +98,7 @@ export function Sidebar({ page, summary, host }: { page: Page; summary?: Summary
     <div className="sidebar-support"><ShieldCheck size={17} /><div><strong>独立本地存储</strong><p>本机运行 / 仅监听回环地址</p></div></div>
     <div className="console-sidebar-footer"><div><span className="status-dot" />本地服务在线<small>v{summary?.version ?? '—'}</small></div>
       <ThemeToggle /><Button variant="ghost" aria-label="退出管理" title="退出管理" onClick={() => { void host.logout().catch(host.error) }}><LogOut size={16} /></Button></div>
+    <button type="button" className="sidebar-disclaimer" onClick={onDisclaimer}>使用须知与免责声明</button>
   </>
 }
 export function Topbar({ page, summary }: { page: Page; summary?: Summary }) {
