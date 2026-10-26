@@ -74,3 +74,4 @@ jobs:
       - run: npm ci --prefix packages/standalone --ignore-scripts
       - run: npm run typecheck:standalone
       - run: node scripts/build-standalone-ui.mjs --check
+      - run: node scripts/build-legacy-payload.mjs --check
